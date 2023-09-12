@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <item
+        android:gravity="center"
+        android:width="50dp"
+        android:height="26dp"
+
+        android:drawable="@drawable/bg_track" />
+
+    <item
+        android:width="12dp"
+        android:height="13dp"
+        android:start="9dp"
+        android:drawable="@drawable/men"
+        android:gravity="center_vertical|start"
+         />
+    <item
+        android:width="12dp"
+        android:height="13dp"
+        android:drawable="@drawable/women"
+        android:end="9dp"
+        android:gravity="center_vertical|end" />
+
+</layer-list>

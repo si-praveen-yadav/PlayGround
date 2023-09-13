@@ -1,19 +1,15 @@
 package com.example.playground
 
 import android.content.Context
-import android.graphics.Color
 import android.os.Bundle
 import android.text.Editable
-import android.text.Html
 import android.text.Spannable
 import android.text.SpannableString
-import android.text.SpannableStringBuilder
 import android.text.TextWatcher
 import android.text.style.ForegroundColorSpan
 import android.util.Log
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.text.bold
-import androidx.core.text.color
+import androidx.core.content.res.ResourcesCompat
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.playground.databinding.ActivityMainBinding
@@ -23,6 +19,7 @@ import com.example.playground.databinding.ItemUserBinding
 class MainActivity : AppCompatActivity() {
     companion object{
         const val TAG = "MainActivity"
+        const val TAG_TEST = "MainActivityTest"
     }
     private lateinit var binding: ActivityMainBinding
 
@@ -33,6 +30,9 @@ class MainActivity : AppCompatActivity() {
 
     private val viewRegex = "@\\{([A-Z][a-z])?\\w+(\\s([A-Z][a-z])?(\\w+)?)?\\}"
 
+    private var displayString = ""
+    private var messageString = ""
+    private var cursorPosition = 0
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityMainBinding.inflate(layoutInflater)
@@ -44,9 +44,10 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun setupEditMessage() {
+
         binding.etMessage.addTextChangedListener(object : TextWatcher{
             override fun beforeTextChanged(p0: CharSequence?, p1: Int, p2: Int, p3: Int) {
-
+                Log.i(TAG,"beforeTextChanged : ${p0.toString()}")
             }
 
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
@@ -56,18 +57,19 @@ class MainActivity : AppCompatActivity() {
                 Log.i(TAG,"onTextChanged : count > $count")
                 Log.i(TAG,"onTextChanged : cursor position > ${binding.etMessage.selectionStart}")
                 */
+                Log.i(TAG,"onTextChanged : ${s.toString()}")
+//                Log.i(TAG,"onTextChanged : Mentioned Users > ${findMentionedUsers(s.toString())}")
 
-                Log.i(TAG,"onTextChanged : Mentioned Users > ${findMentionedUsers(s.toString())}")
-
-                val cPosition = binding.etMessage.selectionStart
+                cursorPosition = binding.etMessage.selectionStart
+                messageString = s.toString()
                 if(!s.isNullOrEmpty()){
-                    filterMatchedUsers(findMentionedUsers(s.toString().substring(0,cPosition)))
+                    filterMatchedUsers(findMentionedUsers(messageString.substring(0,cursorPosition)))
                 }
 
             }
 
             override fun afterTextChanged(p0: Editable?) {
-
+                Log.i(TAG,"afterTextChanged : ${p0.toString()}")
             }
         })
     }
@@ -91,7 +93,7 @@ class MainActivity : AppCompatActivity() {
         return mentions.map { it.value }.toList()
     }
 
-    fun fetchViewMentionedUsers(inputText: String): List<String> {
+    private fun fetchViewMentionedUsers(inputText: String): List<String> {
         val regex = Regex(viewRegex)
         val mentions = regex.findAll(inputText)
         return mentions.map { it.value }.toList()
@@ -102,7 +104,7 @@ class MainActivity : AppCompatActivity() {
         val currentText = binding.etMessage.text.toString()
         val mentionText = "@{$selectedUser} "
 
-        val mentionStartIndex = currentText.substring(0,binding.etMessage.selectionStart).lastIndexOf("@")
+        val mentionStartIndex = currentText.substring(0,cursorPosition).lastIndexOf("@")
         val newText =
             currentText.replaceRange(
                 mentionStartIndex,
@@ -110,32 +112,36 @@ class MainActivity : AppCompatActivity() {
                 mentionText
             )
 
-
-        /*val spans = fetchViewMentionedUsers(newText)
-
-
-        spans.forEach {
-
-        }*/
+        messageString = newText
 
         val spans = fetchViewMentionedUsers(newText)
-        Log.i(TAG,"setEditTextMentions : Matched Spans > $spans")
-        var iCount = 0
-        val mySpan = SpannableStringBuilder()
-        val items = newText.split(Regex(viewRegex))
-        Log.i(TAG,"setEditTextMentions : Matched Items > $items")
-        items.forEach {
-            if(it == " "){
-                if(iCount<spans.size){
-                    mySpan.bold {
-                        append(spans[iCount])
-                        iCount++
-                    }
-                }
-            }else{
-                mySpan.append(it)
-            }
+        val coloredSpans = mutableListOf<Pair<Int,Int>>()
+        spans.forEach {
+            val start = newText.indexOf(it)
+            val end = start + it.length
+
+            coloredSpans.add(Pair(start,end))
         }
+
+        val mySpan = SpannableString(newText)
+        val textColor: Int = ResourcesCompat.getColor(resources, R.color.blue, null)
+        coloredSpans.forEach {
+            mySpan.setSpan(
+                ForegroundColorSpan(textColor),
+                it.first,
+                it.second,
+                Spannable.SPAN_EXCLUSIVE_EXCLUSIVE
+            )
+        }
+        /*val left : Char = '{'
+        val right : Char = '}'
+        val fStr = mySpan.toString().map {
+            if(it != left && it !=right){
+                return@map it
+            }else{
+                return@map ""
+            }
+        }.joinToString("")*/
         binding.etMessage.setText(mySpan)
         binding.etMessage.setSelection(mySpan.length)
     }

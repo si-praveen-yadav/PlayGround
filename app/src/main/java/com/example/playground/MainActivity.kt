@@ -31,8 +31,13 @@ class MainActivity : AppCompatActivity() {
     private val viewRegex = "@\\{([A-Z][a-z])?\\w+(\\s([A-Z][a-z])?(\\w+)?)?\\}"
 
     private var displayString = ""
-    private var messageString = ""
     private var cursorPosition = 0
+
+//    private val mentionedUsers = mutableListOf<MentionUser>()
+
+    private var mentionedUsers = mutableListOf<String>()
+    private var messageString = ""
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityMainBinding.inflate(layoutInflater)
@@ -61,19 +66,31 @@ class MainActivity : AppCompatActivity() {
 //                Log.i(TAG,"onTextChanged : Mentioned Users > ${findMentionedUsers(s.toString())}")
 
                 cursorPosition = binding.etMessage.selectionStart
-                messageString = s.toString()
+                updateMessageString(currentText = s.toString())
+//                displayString = s.toString()
                 if(!s.isNullOrEmpty()){
-                    filterMatchedUsers(findMentionedUsers(messageString.substring(0,cursorPosition)))
+                    val foundMentions =findMentionedUsers(s.toString().substring(0,cursorPosition))
+                    val updatedMentions = mutableListOf<String>()
+                    mentionedUsers.forEachIndexed { index, s ->
+                        if(foundMentions.contains(s)) updatedMentions.add(s)
+                    }
+                    mentionedUsers.clear()
+                    mentionedUsers.addAll(updatedMentions)
+                    filterMatchedUsers(foundMentions)
                 }
 
             }
 
             override fun afterTextChanged(p0: Editable?) {
                 Log.i(TAG,"afterTextChanged : ${p0.toString()}")
+//                updateMentionedUsersIndexes()
             }
         })
     }
 
+    private fun updateMessageString(currentText:String){
+
+    }
     private fun filterMatchedUsers(matches:List<String>){
         val filteredData = mutableListOf<User>()
         val fMatches = matches.map {
@@ -99,24 +116,39 @@ class MainActivity : AppCompatActivity() {
         return mentions.map { it.value }.toList()
     }
 
+    /*private fun updateMentionedUsersIndexes(){
+        if(mentionedUsers.isEmpty()) return
+        val items = mutableListOf<MentionUser>()
+        mentionedUsers.forEachIndexed { index, mentionUser ->
+            if(cursorPosition<mentionUser.startAt || cursorPosition>mentionUser.endAt){
+                items.add(mentionUser)
+            }
+        }
+        mentionedUsers.clear()
+        mentionedUsers.addAll(items)
+
+        Log.i(TAG,"")
+    }*/
     private fun setEditTextMentions(user: User){
         val selectedUser = user.name
         val currentText = binding.etMessage.text.toString()
-        val mentionText = "@{$selectedUser} "
+        val mentionText = "@$selectedUser "
 
         val mentionStartIndex = currentText.substring(0,cursorPosition).lastIndexOf("@")
+
+        /*val mentionUserItem = MentionUser(mentionStartIndex,mentionStartIndex+mentionText.length,mentionText)
+        mentionedUsers.add(mentionUserItem)*/
+
         val newText =
             currentText.replaceRange(
                 mentionStartIndex,
-                binding.etMessage.selectionStart,
+                cursorPosition,
                 mentionText
             )
 
-        messageString = newText
-
         val spans = fetchViewMentionedUsers(newText)
         val coloredSpans = mutableListOf<Pair<Int,Int>>()
-        spans.forEach {
+        mentionedUsers.forEach {
             val start = newText.indexOf(it)
             val end = start + it.length
 
@@ -133,15 +165,6 @@ class MainActivity : AppCompatActivity() {
                 Spannable.SPAN_EXCLUSIVE_EXCLUSIVE
             )
         }
-        /*val left : Char = '{'
-        val right : Char = '}'
-        val fStr = mySpan.toString().map {
-            if(it != left && it !=right){
-                return@map it
-            }else{
-                return@map ""
-            }
-        }.joinToString("")*/
         binding.etMessage.setText(mySpan)
         binding.etMessage.setSelection(mySpan.length)
     }
@@ -206,4 +229,9 @@ class MainActivity : AppCompatActivity() {
     }
 
 
+    data class MentionUser(
+        var startAt:Int,
+        var endAt:Int,
+        var name:String,
+    )
 }
